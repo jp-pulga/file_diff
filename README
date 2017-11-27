@@ -2,8 +2,9 @@ This is a Textadept module for visualizing and merging the differences between
 two files. Install it in your `~/.textadept/modules/` directory and load it from
 your `~/.textadept/init.lua`:
 
+```LUA
     _M.file_diff = require('file_diff')
-
+```
 By default the `F8` key starts a diff session, prompting for two files to diff.
 
 A sample workflow is this:
