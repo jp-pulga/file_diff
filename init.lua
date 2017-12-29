@@ -52,7 +52,7 @@ if WIN32 then
 elseif OSX then
   lib = lib..'osx'
 else
-  local p = io.popen('uname -i')
+  local p = io.popen('uname -m')
   if p:read('*a'):find('64') then lib = lib..'64' end
   p:close()
 end
