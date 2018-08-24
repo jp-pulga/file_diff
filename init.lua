@@ -58,7 +58,6 @@ else
 end
 local diff = require(lib)
 local DELETE, INSERT = 0, 1 -- enum Operation {DELETE, INSERT, EQUAL};
-local bit32_band = bit32.band
 
 local view1, view2
 
@@ -263,14 +262,14 @@ function M.goto_change(next)
   local f = next and buffer.marker_next or buffer.marker_previous
   line1 = f(buffer1, line1, diff_marker)
   while line1 >= 0 and
-        bit32_band(buffer1:marker_get(line1), diff_marker) ==
-        bit32_band(buffer1:marker_get(line1 - step), diff_marker) do
+        buffer1:marker_get(line1) & diff_marker ==
+        buffer1:marker_get(line1 - step) & diff_marker do
     line1 = f(buffer1, line1 + step, diff_marker)
   end
   line2 = f(buffer2, line2, diff_marker)
   while line2 >= 0 and
-        bit32_band(buffer2:marker_get(line2), diff_marker) ==
-        bit32_band(buffer2:marker_get(line2 - step), diff_marker) do
+        buffer2:marker_get(line2) & diff_marker ==
+        buffer2:marker_get(line2 - step) & diff_marker do
     line2 = f(buffer2, line2 + step, diff_marker)
   end
   if line1 < 0 and line2 < 0 then
@@ -324,13 +323,13 @@ function M.merge(left)
   local line_start = buffer:line_from_position(buffer.current_pos)
   local line_end = line_start + 1
   local diff_marker = 2^MARK_ADDITION + 2^MARK_DELETION + 2^MARK_MODIFICATION
-  local marker = bit32_band(buffer:marker_get(line_start), diff_marker)
+  local marker = buffer:marker_get(line_start) & diff_marker
   if marker == 0 then
     -- Look for additions or deletions from the other buffer, which are offset
     -- one line down (side-effect of Scintilla's visible line -> doc line
     -- conversions).
     local line = get_synchronized_line(line_start) + 1
-    if bit32_band((view == view1 and buffer2 or
+    if ((view == view1 and buffer2 or
                                      buffer1):marker_get(line)) > 0 then
       ui.goto_view(view == view1 and view2 or view1)
       buffer:line_down()
@@ -340,11 +339,11 @@ function M.merge(left)
     return
   end
   -- Determine the bounds of the change target it.
-  while bit32_band(buffer:marker_get(line_start - 1), diff_marker) == marker do
+  while buffer:marker_get(line_start - 1) & diff_marker == marker do
     line_start = line_start - 1
   end
   buffer.target_start = buffer:position_from_line(line_start)
-  while bit32_band(buffer:marker_get(line_end), diff_marker) == marker do
+  while buffer:marker_get(line_end) & diff_marker == marker do
     line_end = line_end + 1
   end
   buffer.target_end = buffer:position_from_line(line_end)
@@ -394,7 +393,7 @@ end
 local synchronizing = false
 events.connect(events.UPDATE_UI, function(updated)
   if _VIEWS[view1] and _VIEWS[view2] and updated and not synchronizing then
-    if bit32_band(updated, buffer.UPDATE_H_SCROLL + buffer.UPDATE_V_SCROLL +
+    if updated & (buffer.UPDATE_H_SCROLL + buffer.UPDATE_V_SCROLL +
                            buffer.UPDATE_SELECTION) > 0 then
       synchronizing = true
       synchronize()
@@ -406,7 +405,7 @@ end)
 -- Highlight differences as text is typed and deleted.
 events.connect(events.MODIFIED, function(modification_type)
   if not _VIEWS[view1] or not _VIEWS[view2] then return end
-  if bit32_band(modification_type, 0x01 + 0x02) > 0 then mark_changes() end
+  if modification_type & (0x01 + 0x02) > 0 then mark_changes() end
 end)
 
 events.connect(events.VIEW_NEW, function()
